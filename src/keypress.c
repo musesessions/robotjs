@@ -134,7 +134,11 @@ void toggleKeyCode(MMKeyCode code, const bool down, MMKeyFlags flags)
 		                                                 (CGKeyCode)code, down);
 		assert(keyEvent != NULL);
 
-		CGEventSetType(keyEvent, down ? kCGEventKeyDown : kCGEventKeyUp);
+		// this line is not needed, and only causes the problem where a single command/alt/shift etc key
+		// keyDown events are registered as an independent key press in places like Logic's key command
+		// assignment input fields.
+		// CGEventSetType(keyEvent, down ? kCGEventKeyDown : kCGEventKeyUp);
+
 		CGEventSetFlags(keyEvent, flags);
 		CGEventPost(kCGSessionEventTap, keyEvent);
 		CFRelease(keyEvent);
