@@ -5,6 +5,82 @@
 
 #include <math.h> /* For floor() */
 
+////////
+//////// LOGGING
+////////
+#define FEAT_LOGGING
+#ifdef FEAT_LOGGING
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
+#if defined(IS_WINDOWS)
+    #include <windows.h>
+#else
+    #include <unistd.h>
+    #include <sys/types.h>
+    #include <pwd.h>
+#endif
+
+#define LOGF(level) \
+    va_list args; \
+    char *formatted_string; \
+    int length; \
+    va_start(args, format); \
+    length = vsnprintf(NULL, 0, format, args) + 1;  \
+    va_end(args); \
+    va_start(args, format); \
+    formatted_string = (char *)malloc(length * sizeof(char)); \
+    if (formatted_string == NULL) { \
+        fputs("Memory allocation error\n", stderr); \
+        va_end(args); \
+        return; \
+    } \
+    vsnprintf(formatted_string, length, format, args); \
+    log_write(level, scope, formatted_string); \
+    va_end(args); \
+    free(formatted_string);
+
+FILE* logfile;
+
+void log_init(void) {
+	static bool logIsInitialized = false;
+	if (logIsInitialized) {
+		return;
+	}
+	logIsInitialized = true;
+
+    char filePath[FILENAME_MAX];
+
+#if defined(IS_WINDOWS)
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, 0, filePath))) {
+        strcat(filePath, "\\robotjs.log.txt");
+    }
+#else
+    struct passwd* pw = getpwuid(getuid());
+    const char* homedir = pw->pw_dir;
+    snprintf(filePath, sizeof(filePath), "%s/Documents/robotjs.log.txt", homedir);
+#endif
+
+    logfile = fopen(filePath, "w");
+}
+
+void log_write(const char* level, const char* scope, const char* msg) {
+    if (logfile != NULL) {
+        fprintf(logfile, "%s %s %s\n", level, scope, msg);
+		fflush(logfile);
+    }
+}
+
+void log_infof(const char* scope, const char* format, ...) {
+    LOGF("INFO")
+}
+
+#endif
+////////
+//////// END LOGGING
+////////
+
 #if defined(IS_MACOSX)
 	#include <ApplicationServices/ApplicationServices.h>
 #elif defined(USE_X11)
@@ -196,8 +272,15 @@ MMPoint getMousePos()
  */
 void toggleMouse(bool down, MMMouseButton button)
 {
+#ifdef FEAT_LOGGING
+	log_init();
+    log_infof("toggleMouse", "called with params down=%d, button=%u.", down, button);   
+#endif
 #if defined(IS_MACOSX)
 	const CGPoint currentPos = CGPointFromMMPoint(getMousePos());
+#ifdef FEAT_LOGGING
+    log_infof("toggleMouse", "currentPos=[%f, %f]", currentPos.x, currentPos.y);
+#endif
 	const CGEventType mouseType = MMMouseToCGEventType(down, button);
 	CGEventRef event = CGEventCreateMouseEvent(NULL,
 	                                           mouseType,
@@ -205,6 +288,9 @@ void toggleMouse(bool down, MMMouseButton button)
 	                                           (CGMouseButton)button);
 	CGEventPost(kCGSessionEventTap, event);
 	CFRelease(event);
+#ifdef FEAT_LOGGING
+    log_infof("toggleMouse", "done.");
+#endif
 #elif defined(USE_X11)
 	Display *display = XGetMainDisplay();
 	XTestFakeButtonEvent(display, button, down ? True : False, CurrentTime);
