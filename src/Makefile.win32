@@ -1,0 +1,29 @@
+CC = cl
+CFLAGS = /W4 /O2
+LDFLAGS = user32.lib gdi32.lib comctl32.lib ole32.lib
+
+# List of files to exclude
+EXCLUDE_FILES = MMBitmap.c bitmap_find.c color_find.c png_io.c str_io.c xdisplay.c bmp_io.c zlib_util.c screengrab.c pasteboard.c io.c MMPointArray.c UTHashTable.c base64.c
+
+# Find all .c files, then filter out the excluded files
+SRCS = $(filter-out $(EXCLUDE_FILES), $(wildcard *.c))
+OBJS = $(SRCS:.c=.obj)
+TARGET = robotjs.exe
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(OBJS) /Fe:$(TARGET) $(LDFLAGS)
+
+%.obj: %.c
+	$(CC) $(CFLAGS) /c $< /Fo:$@
+
+clean:
+	del $(OBJS) $(TARGET)
+
+# Print the source files being compiled
+print-sources:
+	@echo Compiling these source files:
+	@echo $(SRCS)

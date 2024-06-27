@@ -2,3 +2,8 @@ build/
 node_modules/
 prebuilds/
 /.idea
+*.o
+*.obj
+*.exe
+.DS_Store
+src/target
